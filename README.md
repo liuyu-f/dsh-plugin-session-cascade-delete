@@ -3,6 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@liuyu-f/dsh-plugin-session-cascade-delete)](https://www.npmjs.com/package/@liuyu-f/dsh-plugin-session-cascade-delete)
 [![license](https://img.shields.io/npm/l/@liuyu-f/dsh-plugin-session-cascade-delete)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
+[![DSH Desktop](https://img.shields.io/badge/DSH%20Desktop-0.2.0--rc.2-blue)](https://github.com/deepseek-ai/deepseek-harness)
 
 > **适配 DeepSeek Harness 官方桌面版 `V0.2.0-rc.2`。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
 
