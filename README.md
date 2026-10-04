@@ -13,6 +13,10 @@
 
 同时提供 agent 工具 `session_delete`。
 
+![侧栏菜单里的「删除会话」](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-menu.png)
+![删除确认弹窗](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-confirm.png)
+![agent 工具删除会话的结果](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/agent-delete.png)
+
 ## 安装
 
 两条渠道装的是同一个包，任选其一。
@@ -46,9 +50,6 @@ dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delet
 
 侧栏菜单项与确认弹窗（截图为深色主题）：
 
-![侧栏菜单里的「删除会话」](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-menu.png)
-![删除确认弹窗](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-confirm.png)
-
 **删掉一个父会话时，它拥有的子代理会话会被一并删除**（最深者先删）。
 
 - **会话正在运行时**：先停止它的任务，再删除；弹窗会提示这一点。
@@ -59,14 +60,12 @@ dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delet
 
 agent 也能删除会话，并在结果里报告实际删掉了什么：
 
-![agent 工具删除会话的结果](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/agent-delete.png)
-
 | 参数            | 作用                                                                                     |
 | --------------- | ---------------------------------------------------------------------------------------- |
 | `sessionId`     | 直接指定要删的会话 id（推荐）                                                            |
 | `title`         | 只知道标题时用；**只有在标题唯一时才会删**，否则报错并列出候选                           |
 | `discover`      | 只列出本 profile 知道的会话，不删任何东西                                                |
-| `discoverTree`  | **只列出某一个会话拥有的子代理树**（id、深度、父级），不删任何东西——跑级联前先看会删掉谁 |
+| `discoverTree`  | **只列出某一个会话拥有的子代理树**（id、深度、父级），不删任何东西。删除前不需要用它——删除本身就会级联，结果里会报告实际删掉了什么 |
 | `keepSubagents` | 只删这一个会话，保留它的子代理会话（默认是连子会话一起删）                               |
 
 两条安全约束：

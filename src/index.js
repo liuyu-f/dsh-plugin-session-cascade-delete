@@ -964,7 +964,7 @@ function apply(ctx, config) {
         },
         discoverTree: {
           type: 'string',
-          description: 'Session id: show ONLY the subagent tree that one session owns (id, depth, parent, and which one you are running in) and delete nothing. This is how to see what a cascade would remove before running it.',
+          description: 'Session id: show ONLY the subagent tree that one session owns (id, depth, parent, and which one you are running in) and delete nothing. Not needed before deleting — a delete cascades on its own and its result reports what was removed. Use it only when the caller asks what a cascade would remove.',
         },
         keepSubagents: {
           type: 'boolean',
@@ -981,8 +981,7 @@ function apply(ctx, config) {
     async execute(args, exec) {
       const callerId = callingSessionId(ctx)
 
-      // Tree discovery: mechanical, read-only, and the way to see what a
-      // cascade WOULD delete before running it. It calls the SAME
+      // Tree discovery: mechanical, read-only. It calls the SAME
       // `collectDescendants` the cascade calls — one source (the subagent
       // catalog), so the preview and the delete can never disagree.
       const treeRoot = typeof args?.discoverTree === 'string' ? args.discoverTree.trim() : ''
