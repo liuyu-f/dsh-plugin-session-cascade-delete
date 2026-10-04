@@ -581,7 +581,7 @@ async function resolveSessionByTitle(ctx, title) {
     return value !== null && value.replace(/\s*\(\d+\)\s*$/, '') === base
   })
   if (forked.length === 1) return { sessionId: forked[0].sessionId }
-  const matched = (exact.length > 1 ? exact : forked).map((entry) => ({ sessionId: entry.sessionId, title: entry.title, running: entry.running }))
+  const matched = (exact.length > 1 ? exact : forked).map((entry) => ({ sessionId: entry.sessionId, title: entry.title }))
   return {
     error: matched.length === 0
       ? `no session matches the title ${JSON.stringify(title)}; set discover to list sessions, then pass an exact sessionId`
@@ -960,7 +960,7 @@ function apply(ctx, config) {
         },
         discover: {
           type: 'boolean',
-          description: 'List the sessions this profile knows — one line each, `<sessionId>  running=<true|false>  <title>`, with ` (current session)` appended to the title of the session you are running in — and delete nothing. Pass this alone — with no sessionId, no title, no discoverTree. Defaults to false.',
+          description: 'List the sessions this profile knows (id, title, running, and whether it is the session you are running in) and delete nothing. Pass this alone — with no sessionId, no title, no discoverTree. Defaults to false.',
         },
         discoverTree: {
           type: 'string',
@@ -1014,14 +1014,12 @@ function apply(ctx, config) {
       if (args?.discover === true) {
         const sessions = await listSessions(ctx)
         if (sessions.length === 0) return 'no sessions are known to this profile'
-        // One line per Session, aligned columns, and the current Session marked in
-        // the TITLE rather than at the start of the line: the title is what a
-        // reader matches against, and a leading marker is easy to misread across
-        // a table — a caller has mistaken another row for its own that way.
+        // The current Session is marked after the TITLE, not as a leading column:
+        // the title is what a reader matches on, and a leading marker is easy to
+        // misread across a table.
         const lines = sessions.map((entry) => {
-          const mine = entry.sessionId === callerId
           const title = entry.title ?? '(untitled)'
-          return `${entry.sessionId}  running=${entry.running}  ${title}${mine ? ' (current session)' : ''}`
+          return `${entry.sessionId}  running=${entry.running}  ${title}${entry.sessionId === callerId ? ' > (当前会话)' : ''}`
         })
         return lines.join('\n')
       }
@@ -1030,7 +1028,7 @@ function apply(ctx, config) {
       if (sessionId.length === 0) {
         const resolved = await resolveSessionByTitle(ctx, args?.title)
         if (resolved.sessionId === undefined) {
-          const candidates = (resolved.candidates ?? []).map((entry) => `${entry.sessionId}  running=${entry.running === true}  ${entry.title ?? '(untitled)'}${entry.sessionId === callerId ? ' (current session)' : ''}`).join('\n')
+          const candidates = (resolved.candidates ?? []).map((entry) => `${entry.sessionId}  ${entry.title ?? '(untitled)'}${entry.sessionId === callerId ? ' > (当前会话)' : ''}`).join('\n')
           return [`delete failed: ${resolved.error}`, candidates].filter((line) => line.length > 0).join('\n')
         }
         sessionId = resolved.sessionId
