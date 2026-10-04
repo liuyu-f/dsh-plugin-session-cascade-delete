@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# 开发期产物：不进包、不进仓库（脚本放在工作区级 _tools/）
+tools/

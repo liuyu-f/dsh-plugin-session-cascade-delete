@@ -1,0 +1,58 @@
+{
+  "name": "@liuyu-f/dsh-plugin-session-cascade-delete",
+  "version": "1.0.0",
+  "description": "Permanently delete DeepSeek Harness sessions from the UI (header button + sidebar row menu) or via the session_delete tool: removes the log directory, projection cache and workspace accounting, cascades into the subagent sessions a session owns (your forked branches are never touched), and stops a running agent first.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/liuyu-f/dsh-plugin-session-cascade-delete",
+  "author": {
+    "name": "liuyu-f",
+    "url": "https://github.com/liuyu-f"
+  },
+  "contributors": [
+    {
+      "name": "lsz-asd",
+      "url": "https://github.com/lsz-asd",
+      "note": "original @huanlin/dsh-plugin-session-delete this plugin is adapted from"
+    }
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "dsh-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liuyu-f/dsh-plugin-session-cascade-delete.git"
+  },
+  "icon": "./icon.svg",
+  "meta": {
+    "title": "Cascade Session Delete",
+    "description": "Permanently delete a session from the header button or the sidebar row menu, cascading into the subagent sessions it owns."
+  },
+  "files": [
+    "src/",
+    "locale/",
+    "cordis.patch.yml",
+    "icon.svg"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Cascade Session Delete",
+    "description": "Permanently delete a session from the header or the sidebar menu, cascading into the subagent sessions it owns."
+  }
+}
