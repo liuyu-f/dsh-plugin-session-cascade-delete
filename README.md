@@ -64,9 +64,18 @@ agent 也能删除会话，并在结果里报告实际删掉了什么：
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `sessionId`     | 直接指定要删的会话 id（推荐）                                                                                                      |
 | `title`         | 只知道标题时用；**只有在标题唯一时才会删**，否则报错并列出候选                                                                     |
-| `discover`      | 只列出本 profile 知道的会话，不删任何东西                                                                                          |
+| `discover`      | 只列出本 profile 知道的会话，不删任何东西。每行 `会话id  running=<true\|false>  标题`，**当前会话在标题后标 `(current session)`**            |
 | `discoverTree`  | **只列出某一个会话拥有的子代理树**（id、深度、父级），不删任何东西。删除前不需要用它——删除本身就会级联，结果里会报告实际删掉了什么 |
 | `keepSubagents` | 只删这一个会话，保留它的子代理会话（默认是连子会话一起删）                                                                         |
+
+`discover` 的输出形如：
+
+```
+session-1  running=true   DSH插件开发
+session-2  running=false  DSH插件开发指南
+session-3  running=true   大肥鱼 (current session)
+session-4  running=true   (untitled)
+```
 
 两条安全约束：
 
