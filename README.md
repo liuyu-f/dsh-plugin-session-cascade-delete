@@ -15,7 +15,6 @@
 
 ![侧栏菜单里的「删除会话」](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-menu.png)
 ![删除确认弹窗](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/manual-confirm.png)
-![agent 工具删除会话的结果](https://raw.githubusercontent.com/liuyu-f/dsh-plugin-session-cascade-delete/main/docs/agent-delete.png)
 
 ## 安装
 
@@ -27,7 +26,7 @@
 dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete@latest
 ```
 
-钉版本时把 `@latest` 换成 `@1.0.2`。
+钉版本时把 `@latest` 换成 `@1.0.3`。
 
 **GitHub** —— 安装指定 tag 的源码：
 
@@ -35,7 +34,7 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete@late
 dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delete
 ```
 
-钉版本时在后方添加 `#v1.0.2`。**不带 `#` 安装的是默认分支最新代码**，可能包含尚未发布的改动。
+钉版本时在后方添加 `#v1.0.3`。**不带 `#` 安装的是默认分支最新代码**，可能包含尚未发布的改动。
 
 确认安装：`dsh plugin --profile desktop list`。`desktop` 换成实际 profile 名。
 卸载：把 `add` 换成 `remove`，参数用包名 `@liuyu-f/dsh-plugin-session-cascade-delete`。
@@ -105,9 +104,9 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete@late
 
 ## 版本
 
-| 版本 | 变更 |
-| --- | --- |
-| 1.0.2 | 删除当前打开的会话后清空主视图，不再新建会话。此前复用 `startSession()`（新建会话流程），每次删除都可能留下一个内存中的 `(untitled)` 会话，重启才消失 |
+| 版本  | 变更                                                                                                                                                       |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0.3 | `discover` 列出会话时，当前会话的标记从行首移到标题之后（`标题 > (当前会话)`）：标题才是读者比对的字段，行首的标记跨行容易看错 |
+| 1.0.2 | 删除当前打开的会话后清空主视图，不再新建会话。此前复用 `startSession()`（新建会话流程），每次删除都可能留下一个内存中的 `(untitled)` 会话，重启才消失      |
 | 1.0.1 | `discoverTree` 不再被描述成删除前的必要步骤。此前 agent 会先预览级联范围再删除，实际删除本身即级联、结果也会报告删除了什么，预览只在调用方明确要求时才需要 |
-| 1.0.0 | 首个版本：界面删除入口（会话头部 + 侧栏菜单）、`session_delete` 工具、子代理级联删除、分支会话保护、运行中会话先停止 |
-
+| 1.0.0 | 首个版本：界面删除入口（会话头部 + 侧栏菜单）、`session_delete` 工具、子代理级联删除、分支会话保护、运行中会话先停止                                       |
