@@ -201,11 +201,15 @@ window.__ModuleLoader__.load({
         const openId = reference === null || reference === undefined ? undefined : reference.sessionId
         if (typeof openId !== 'string' || openId.length === 0) return
         if (idCore(openId) !== idCore(deletedSessionId)) return
-        if (typeof workspace.startSession !== 'function') return
-        // The shipped recovery: reuse a blank session in the current/recent
-        // workspace, or create one. Deliberately not "open whichever survivor is
-        // first" — that made the outcome depend on list order.
-        workspace.startSession()
+        // Clear, do not start: `startSession()` is the New Session flow, and each
+        // call that finds no reusable blank creates one — so every delete left
+        // another in-memory (untitled) Session behind. `clearMain()` is what the
+        // shipped code does when the current Session leaves the list (see
+        // `clearArchivedCurrent()` behind the archive paths), and deletion is the
+        // same situation. A later New Session then reuses whatever blank exists
+        // instead of adding one.
+        if (typeof workspace.clearMain !== 'function') return
+        workspace.clearMain()
       } catch {
         /* cleanup must never surface as an unhandled error in a slot entry */
       }
@@ -446,7 +450,10 @@ window.__ModuleLoader__.load({
       if (localeService === null) ctx.inject(['locale'], (sub) => adoptLocale(sub.locale))
 
       // The workspace service owns the main view: `mainReference` names the
-      // session it holds and `startSession()` is the shipped recovery.
+      // session it holds and `clearMain()` empties it. Neither is in the published
+      // service type — both are reached as class members, the same risk this file
+      // already took to repair the view after a delete. An unexpected shape means
+      // the view is left alone rather than a phantom Session created.
       uiWorkspaceService = ctx.get('uiWorkspace') ?? null
       if (uiWorkspaceService === null) {
         ctx.inject(['uiWorkspace'], (sub) => {
