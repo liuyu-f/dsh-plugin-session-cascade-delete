@@ -27,15 +27,15 @@
 dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete@latest
 ```
 
-钉版本时把 `@latest` 换成 `@0.7.0`。
+钉版本时把 `@latest` 换成 `@1.0.1`。
 
 **GitHub** —— 安装指定 tag 的源码：
 
 ```sh
-dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delete#v0.7.0
+dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delete
 ```
 
-`#v0.7.0` 换成目标 tag 即可。**不带 `#` 安装的是默认分支最新代码**，可能包含尚未发布的改动。
+钉版本时在后方添加 `#v1.0.1`。**不带 `#` 安装的是默认分支最新代码**，可能包含尚未发布的改动。
 
 确认安装：`dsh plugin --profile desktop list`。`desktop` 换成实际 profile 名。
 卸载：把 `add` 换成 `remove`，参数用包名 `@liuyu-f/dsh-plugin-session-cascade-delete`。
@@ -60,13 +60,13 @@ dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delet
 
 agent 也能删除会话，并在结果里报告实际删掉了什么：
 
-| 参数            | 作用                                                                                     |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| `sessionId`     | 直接指定要删的会话 id（推荐）                                                            |
-| `title`         | 只知道标题时用；**只有在标题唯一时才会删**，否则报错并列出候选                           |
-| `discover`      | 只列出本 profile 知道的会话，不删任何东西                                                |
+| 参数            | 作用                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `sessionId`     | 直接指定要删的会话 id（推荐）                                                                                                      |
+| `title`         | 只知道标题时用；**只有在标题唯一时才会删**，否则报错并列出候选                                                                     |
+| `discover`      | 只列出本 profile 知道的会话，不删任何东西                                                                                          |
 | `discoverTree`  | **只列出某一个会话拥有的子代理树**（id、深度、父级），不删任何东西。删除前不需要用它——删除本身就会级联，结果里会报告实际删掉了什么 |
-| `keepSubagents` | 只删这一个会话，保留它的子代理会话（默认是连子会话一起删）                               |
+| `keepSubagents` | 只删这一个会话，保留它的子代理会话（默认是连子会话一起删）                                                                         |
 
 两条安全约束：
 
@@ -101,4 +101,12 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete@late
 
 ## 关于这个插件
 
-`@huanlin/dsh-plugin-session-delete`（[上游仓库](https://github.com/lsz-asd/dsh-plugin-session-delete)）的新 DSH 适配版，改动与增强围绕子代理：级联删除、分支保护、活会话删除、会话 id 两种拼写的处理。维护者文档见 [DEVELOPMENT.md](https://github.com/liuyu-f/dsh-plugin-session-cascade-delete/blob/main/DEVELOPMENT.md)，已发布版本的变更见 [CHANGELOG.md](https://github.com/liuyu-f/dsh-plugin-session-cascade-delete/blob/main/CHANGELOG.md)。
+`@huanlin/dsh-plugin-session-delete`（[上游仓库](https://github.com/lsz-asd/dsh-plugin-session-delete)）的新 DSH 适配版，改动与增强围绕子代理：级联删除、分支保护、活会话删除、会话 id 两种拼写的处理。维护者文档见 [DEVELOPMENT.md](https://github.com/liuyu-f/dsh-plugin-session-cascade-delete/blob/main/DEVELOPMENT.md)。
+
+## 版本
+
+| 版本 | 变更 |
+| --- | --- |
+| 1.0.1 | `discoverTree` 不再被描述成删除前的必要步骤。此前 agent 会先预览级联范围再删除，实际删除本身即级联、结果也会报告删除了什么，预览只在调用方明确要求时才需要 |
+| 1.0.0 | 首个版本：界面删除入口（会话头部 + 侧栏菜单）、`session_delete` 工具、子代理级联删除、分支会话保护、运行中会话先停止 |
+

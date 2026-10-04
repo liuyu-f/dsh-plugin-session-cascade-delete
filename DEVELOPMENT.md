@@ -2,7 +2,7 @@
 
 维护者文档；使用者看 [README.md](README.md)。
 
-- 包名 `@liuyu-f/dsh-plugin-session-cascade-delete`，版本 `0.7.0`，面向 `@deepseek-ai/dsh` `0.2.0-rc.2` 一代
+- 包名 `@liuyu-f/dsh-plugin-session-cascade-delete`，版本 `1.0.1`，面向 `@deepseek-ai/dsh` `0.2.0-rc.2` 一代
 - 基于 `@huanlin/dsh-plugin-session-delete`（上游 `lsz-asd`）的新 DSH 适配版，改动与增强主要围绕子代理：级联删除、分支保护、活会话删除
 - `src/index.js` Host 半（服务、工具、HTTP 路由）· `src/client.js` Web 半（三个槽位 + 弹窗）· `locale/*.json` 展示元信息 · `cordis.patch.yml`
 
