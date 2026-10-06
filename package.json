@@ -1,6 +1,6 @@
 {
   "name": "@liuyu-f/dsh-plugin-session-cascade-delete",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Permanently delete DeepSeek Harness sessions from the UI (header button + sidebar row menu) or via the session_delete tool: removes the log directory, projection cache and workspace accounting, cascades into the subagent sessions a session owns (your forked branches are never touched), and stops a running agent first.",
   "type": "module",
   "license": "MIT",
