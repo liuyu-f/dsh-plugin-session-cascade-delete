@@ -3,10 +3,9 @@
 [![npm](https://img.shields.io/npm/v/@liuyu-f/dsh-plugin-session-cascade-delete)](https://www.npmjs.com/package/@liuyu-f/dsh-plugin-session-cascade-delete)
 [![license](https://img.shields.io/npm/l/@liuyu-f/dsh-plugin-session-cascade-delete)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
-[![DSH Desktop](https://img.shields.io/badge/DSH%20Desktop-0.2.0--rc.2-blue)](https://github.com/deepseek-ai/deepseek-harness)
-[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+[![DSH](https://img.shields.io/badge/DSH-0.2.0--rc.2-blue)](https://github.com/deepseek-ai/deepseek-harness)
 
-> **适配 DeepSeek Harness 官方桌面版 `V0.2.0-rc.2`。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
+> **适配 DeepSeek Harness `V0.2.0-rc.2`。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
 
 在 DeepSeek Harness 中彻底删除会话，并清理界面本身不会清理的数据。
 
@@ -19,21 +18,29 @@
 
 ## 安装
 
-两条渠道装的是同一个包，任选其一。
+两种安装方式，任选其一。
 
-**npm（推荐）** —— 安装已发布版本：
+**UI （推荐）**：
+
+打开软件 - 点击左上方`插件` - 再点击右上方`+ 添加插件`，然后输入：
+
+```
+@liuyu-f/dsh-plugin-session-cascade-delete
+```
+
+**终端**：
+
+- web
+
+```sh
+dsh plugin --profile web add @liuyu-f/dsh-plugin-session-cascade-delete
+```
+
+- 桌面：
 
 ```sh
 dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete
 ```
-
-**GitHub** —— 安装指定 tag 的源码：
-
-```sh
-dsh plugin --profile desktop add github:liuyu-f/dsh-plugin-session-cascade-delete
-```
-
-**通过github安装的是默认分支最新代码**，可能包含尚未发布的改动。
 
 ## 怎么用
 
@@ -102,7 +109,7 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete
 
 | 版本  | 变更                                                                                                                                                       |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0.4 | README 增加 Awesome DSH Plugin 徽章（已提交收录 PR #6699）；文档简化：`DEVELOPMENT.md` 移除发布流程与旧版更新日志，README 去掉钉版本说明 |
+| 1.0.4 | README 增加 Awesome DSH Plugin 徽章（已提交收录 PR #6699）；文档简化：`DEVELOPMENT.md` 移除发布流程与旧版更新日志，README 去掉钉版本说明                   |
 | 1.0.3 | `discover` 列出会话时，当前会话的标记从行首移到标题之后（`标题 > (当前会话)`）：标题才是读者比对的字段，行首的标记跨行容易看错                             |
 | 1.0.2 | 删除当前打开的会话后清空主视图，不再新建会话。此前复用 `startSession()`（新建会话流程），每次删除都可能留下一个内存中的 `(untitled)` 会话，重启才消失      |
 | 1.0.1 | `discoverTree` 不再被描述成删除前的必要步骤。此前 agent 会先预览级联范围再删除，实际删除本身即级联、结果也会报告删除了什么，预览只在调用方明确要求时才需要 |
