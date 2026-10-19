@@ -11,20 +11,23 @@
 // part:
 //
 //   1. stop a live agent that still owns the session (cancel + bounded wait);
-//   2. flush the live session so its write handle drains before the log goes;
+//   2. flush the live session, then detach its live entry from the session
+//      store and its agent entry from the agent registry. Detaching emits
+//      `session/disposed`, which drains and closes the persistence write
+//      handle and makes the projection cache publish its final row; removing
+//      the registry entry keeps the session out of every live list;
 //   3. resolve the artifact through sessionPersistence.locate() and remove the
 //      session directory, every id spelling, and the project directory once it
 //      is empty;
-//   4. sweep repeatedly around event-loop turns, because a dispose path that
-//      was already in flight can re-materialize the directory, and refuse to
-//      continue while anything survives;
+//   4. sweep until the detached write path has released the directory, and
+//      refuse to continue while anything survives;
 //   5. only once the log is confirmed gone, drop the projection-cache row —
 //      live domain row AND its on-disk document — and the workspace accounting
 //      (`sessionIds`, plus archive/pin membership through the registry's own
 //      methods when it exposes them);
-//   6. announce `api-session/removed`, the event the session controller itself
-//      emits on `session/disposed`. Deleting files never disposes a session, so
-//      without this the row lingers in every connected UI.
+//   6. announce `api-session/removed` for both id spellings. The detached
+//      session already makes the controller announce the canonical one; this
+//      covers the other spelling and a composition that missed the detach.
 //
 // A session may OWN subagent sessions (`ctx.subagents.listDescendants`). They
 // are deleted FIRST, deepest-first, because a removed parent leaves them on
@@ -250,17 +253,18 @@ async function stopAgentIfRunning(ctx, sessionId) {
   } catch {
     /* already settling */
   }
-  if (typeof agent.whenIdle === 'function') {
-    try {
-      await Promise.race([
-        Promise.resolve(agent.whenIdle()),
-        new Promise((resolve) => setTimeout(resolve, 15000)),
-      ])
-    } catch {
-      /* proceed with the deletion regardless */
-    }
+  if (typeof agent.whenIdle !== 'function') return true
+  let timer
+  try {
+    return await Promise.race([
+      Promise.resolve(agent.whenIdle()).then(() => true, () => false),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(false), 15000)
+      }),
+    ])
+  } finally {
+    if (timer !== undefined) clearTimeout(timer)
   }
-  return true
 }
 
 // Ask the store for a durability checkpoint on a session that is still live.
@@ -279,6 +283,66 @@ async function flushLiveSession(ctx, sessionId) {
     return true
   } catch {
     /* deletion proceeds and removes the log anyway */
+  }
+  return false
+}
+
+// A live session and a live agent are entries in their owning service's `store`
+// map, and each entry carries the teardown the owning lifecycle would run:
+// `SessionStore.enter()` installs `entry.detach()`, `AgentRegistry.enter()`
+// installs the registry removal (`detachEntered`). Removing both entries is
+// what stops them from outliving their deleted log: `session/disposed` drains
+// and closes the persistence write handle, the projection cache commits its
+// final row (which this plugin then deletes), and the session controller tells
+// the UI to drop the row.
+//
+// Stopping the turn alone is not enough: a cancelled but still-registered
+// agent keeps the session in `sessions.list()` and can publish one more cache
+// row after the filesystem sweep.
+function storeEntry(service, sessionId) {
+  const store = service && service.store
+  if (!(store instanceof Map)) return undefined
+  for (const [key, entry] of store) {
+    const id = entry && typeof entry.id === 'string' ? entry.id : key
+    if (typeof id === 'string' && idsReferToSameSession(id, sessionId)) return entry
+  }
+  return undefined
+}
+
+function detachSessionEntry(ctx, sessionId) {
+  const sessions = ctx.get('sessions')
+  const entry = storeEntry(sessions, sessionId)
+  if (entry === undefined) return false
+  try {
+    if (typeof entry.detach === 'function') {
+      entry.detach()
+      return true
+    }
+    if (typeof sessions.detachEntered === 'function') {
+      sessions.detachEntered(entry)
+      return true
+    }
+  } catch {
+    /* the report states whether the entry left the live store */
+  }
+  return false
+}
+
+function detachAgentEntry(ctx, sessionId) {
+  const agents = ctx.get('agents')
+  const entry = storeEntry(agents, sessionId)
+  if (entry === undefined) return false
+  try {
+    if (typeof agents.detachEntered === 'function') {
+      agents.detachEntered(entry)
+      return true
+    }
+    if (typeof entry.detach === 'function') {
+      entry.detach()
+      return true
+    }
+  } catch {
+    /* best effort: the session detach already removed it from every list */
   }
   return false
 }
@@ -315,34 +379,46 @@ function warn(ctx, message) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 // --- derived-state cleanup --------------------------------------------------
 
 // The projection cache keeps one document per session on disk; clearing only
 // the live domain would leave that document behind, and a later cache read
 // could serve a deleted session's rows.
+function projectionDirectory() {
+  return path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'storages', 'session_projcache', 'sessions')
+}
+
+function projectionFileNames(sessionId) {
+  let names = []
+  try {
+    names = fs.readdirSync(projectionDirectory())
+  } catch {
+    return []
+  }
+  const variants = sessionIdVariants(sessionId)
+  return names.filter((entry) => variants.some((variant) => entry === `${variant}.json` || entry.startsWith(`${variant}.json.bak.`)))
+}
+
 function removeProjectionFiles(sessionId) {
-  const dir = path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'storages', 'session_projcache', 'sessions')
+  const dir = projectionDirectory()
   let removed = 0
-  for (const variant of sessionIdVariants(sessionId)) {
-    let names = []
+  for (const entry of projectionFileNames(sessionId)) {
     try {
-      names = fs.readdirSync(dir)
+      fs.rmSync(path.join(dir, entry), { force: true })
+      removed++
     } catch {
-      return removed
-    }
-    for (const entry of names) {
-      // The record itself plus any `invalidRecords: backup-and-skip` salvage
-      // copies (`<id>.json.bak.<stamp>`), which are just as stale.
-      if (entry !== `${variant}.json` && !entry.startsWith(`${variant}.json.bak.`)) continue
-      try {
-        fs.rmSync(path.join(dir, entry), { force: true })
-        removed++
-      } catch {
-        /* held open or already gone */
-      }
+      /* held open or already gone */
     }
   }
   return removed
+}
+
+function projectionFilesPresent(sessionId) {
+  return projectionFileNames(sessionId).length > 0
 }
 
 function safeGlobalRead(registry) {
@@ -698,11 +774,23 @@ async function purgeOne(ctx, raw, { config, signal } = {}) {
   const header = await resolveHeader(ctx, raw, signal)
   const exactDirs = new Set(dirsFromPersistence(persistence, header))
 
-  // Stop first, drain second: a stopped session's flush seals its buffered
-  // events, and only then can its log be removed without being written back.
-  const wasLive = liveSessionFor(ctx, raw) !== undefined
+  // Stop the turn, checkpoint it, then release both live entries. The release
+  // is what closes the persistence write handle (through `session/disposed`)
+  // and empties the live session list; deleting files while the entries stayed
+  // registered is what let a stopped session keep publishing a cache row.
+  const wasLive = liveSessionFor(ctx, raw) !== undefined || liveAgentFor(ctx, raw) !== undefined
   const stopped = await stopAgentIfRunning(ctx, raw)
   const flushed = await flushLiveSession(ctx, raw)
+  const sessionDetached = detachSessionEntry(ctx, raw)
+  const agentDetached = detachAgentEntry(ctx, raw)
+
+  // `session/disposed` listeners are asynchronous: the persistence backend
+  // drains and closes its writer, and the projection cache writes its final
+  // row. Give both a turn before removing what they touch.
+  if (sessionDetached) {
+    for (let attempt = 0; attempt < 40 && liveSessionFor(ctx, raw) !== undefined; attempt++) await sleep(25)
+    await sleep(150)
+  }
 
   const removeAll = () => {
     let removed = false
@@ -717,12 +805,15 @@ async function purgeOne(ctx, raw, { config, signal } = {}) {
     return removeSessionDirs(root, raw) || removed
   }
 
-  // The dispose path may be mid-flight and can re-create a directory right
-  // after removal, so sweep repeatedly and confirm before touching accounting.
+  // The detach path may still be draining, so retry until the directory is
+  // gone; a write handle that has not closed yet keeps the file locked on
+  // Windows for a few turns.
   let dirRemoved = false
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 20; attempt++) {
     dirRemoved = removeAll() || dirRemoved
-    await new Promise((resolve) => setImmediate(resolve))
+    const survivors = [...exactDirs].filter(isDirectory)
+    if (survivors.length === 0 && findSessionDirs(root, raw).length === 0) break
+    await sleep(150)
   }
 
   const leftovers = [...new Set([...[...exactDirs].filter(isDirectory), ...findSessionDirs(root, raw)])]
@@ -733,10 +824,22 @@ async function purgeOne(ctx, raw, { config, signal } = {}) {
   // The projection row is not the grouping authority; only now, with the log
   // confirmed gone, does the session leave its grouping accounting.
   const cleanup = await stripStorageDomains(ctx, raw)
-  const cacheFilesRemoved = removeProjectionFiles(raw)
+  let cacheFilesRemoved = removeProjectionFiles(raw)
   const projectionRemoved = cleanup.projection || cacheFilesRemoved > 0
 
-  if (!dirRemoved && !projectionRemoved && !cleanup.workspace) {
+  // The detached session's final cache write is asynchronous; remove anything
+  // that landed between the domain delete and that write.
+  if (sessionDetached) {
+    for (let attempt = 0; attempt < 10 && projectionFilesPresent(raw); attempt++) {
+      await sleep(100)
+      cacheFilesRemoved += removeProjectionFiles(raw)
+    }
+    if (projectionFilesPresent(raw)) {
+      cleanup.degraded.push({ step: 'projection-file', detail: 'a projection cache document survived the removal attempts' })
+    }
+  }
+
+  if (!dirRemoved && !projectionRemoved && !cleanup.workspace && !sessionDetached && !agentDetached) {
     throw new DeleteError(`session not found: ${raw}`, 404)
   }
 
@@ -745,6 +848,8 @@ async function purgeOne(ctx, raw, { config, signal } = {}) {
     wasLive,
     stopped,
     flushed,
+    sessionDetached,
+    agentDetached,
     dirRemoved,
     projectionRemoved,
     cacheFilesRemoved,
@@ -1034,12 +1139,10 @@ function apply(ctx, config) {
         sessionId = resolved.sessionId
       }
 
-      // Refuse to delete the session this call runs in. Not a policy nicety:
-      // `tool/result` is appended by the agent loop AFTER execution and the tool
-      // pipeline cannot suppress it, while the persistence seam has no deletion
-      // API and keeps its still-open write handle batching — so the deleted log
-      // can be re-created holding only the trailing events. The UI path does not
-      // have this contradiction, so point the caller there.
+      // Refuse to delete the session this call runs in: `tool/result` is
+      // appended by the agent loop AFTER execution, so removing that log here
+      // either loses the result or lets the append path recreate the file. The
+      // UI path has no such contradiction, so point the caller there.
       if (callerId !== null && idsReferToSameSession(sessionId, callerId)) {
         return [
           `refused: ${sessionId} is the session THIS call is running in.`,
@@ -1081,6 +1184,8 @@ function apply(ctx, config) {
           `deleted session ${report.sessionId}`,
           `was live at delete time: ${report.wasLive}`,
           `agent stopped: ${report.stopped}`,
+          `live session released: ${report.sessionDetached}`,
+          `live agent unregistered: ${report.agentDetached}`,
           // NOT a failure when false: `sessions.flush` returns "did at least one
           // durability listener participate", so false means this composition
           // registered none — not that the checkpoint failed.

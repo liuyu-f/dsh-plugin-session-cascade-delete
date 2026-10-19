@@ -201,13 +201,12 @@ window.__ModuleLoader__.load({
         const openId = reference === null || reference === undefined ? undefined : reference.sessionId
         if (typeof openId !== 'string' || openId.length === 0) return
         if (idCore(openId) !== idCore(deletedSessionId)) return
-        // Clear, do not start: `startSession()` is the New Session flow, and each
-        // call that finds no reusable blank creates one — so every delete left
-        // another in-memory (untitled) Session behind. `clearMain()` is what the
-        // shipped code does when the current Session leaves the list (see
-        // `clearArchivedCurrent()` behind the archive paths), and deletion is the
-        // same situation. A later New Session then reuses whatever blank exists
-        // instead of adding one.
+        // Clear, do not start: `startSession()` is the New Session flow and
+        // creates a fresh Session, so calling it here left an extra (untitled)
+        // Session behind on every delete. `clearMain()` is what the shipped code
+        // does when the current Session leaves the list (see
+        // `clearArchivedCurrent()` behind the archive paths), and deletion is
+        // the same situation: it empties the view without minting a Session.
         if (typeof workspace.clearMain !== 'function') return
         workspace.clearMain()
       } catch {
