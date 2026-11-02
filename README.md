@@ -3,9 +3,9 @@
 [![npm](https://img.shields.io/npm/v/@liuyu-f/dsh-plugin-session-cascade-delete)](https://www.npmjs.com/package/@liuyu-f/dsh-plugin-session-cascade-delete)
 [![license](https://img.shields.io/npm/l/@liuyu-f/dsh-plugin-session-cascade-delete)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
-[![DSH](https://img.shields.io/badge/DSH-0.2.1--rc.2-blue)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH](https://img.shields.io/badge/DSH-0.2.0--rc.*_to_0.2.1--rc.5-blue)](https://github.com/deepseek-ai/deepseek-harness)
 
-> **适配 DeepSeek Harness `V0.2.0-rc.2` 到 `0.2.1-rc.2`。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
+> **实测从 `V0.2.0-rc.*` 到 `0.2.1-rc.5` 可用；不出意外将支持 `0.2.1-rc.*` 所有版本。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
 
 简单实用的会话删除工具，在 DeepSeek Harness 中彻底删除会话及其相关数据。
 
@@ -109,6 +109,7 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete
 
 | 版本  | 变更                                                                                                                                                                      |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0.6 | 文档：更新 DSH 兼容范围——实测 `V0.2.0-rc.*` 到 `0.2.1-rc.5` 可用，`0.2.1-rc.*` 预期全部可用                                                                                |
 | 1.0.5 | 删除运行中的会话时先释放 Agent 与会话（停止、注销、从会话存储移除），再清理日志与缓存；删除后界面与 `discover` 立即不再列出，无需重启。适配 DSH 0.2.1-rc.2                |
 | 1.0.4 | 文档简化：`DEVELOPMENT.md` 移除发布流程与旧版更新日志，README 去掉钉版本说明；投稿收录清单 [PR #6699](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6699) |
 | 1.0.3 | `discover` 列出会话时，当前会话的标记从行首移到标题之后（`标题 > (当前会话)`）：标题才是读者比对的字段，行首的标记跨行容易看错                                            |
