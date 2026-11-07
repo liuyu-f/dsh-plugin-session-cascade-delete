@@ -46,6 +46,14 @@ window.__ModuleLoader__.load({
     const HEADER_ID = 'session-delete.header'
     const MENU_ID = 'session-delete.menu'
     const DIALOG_ID = 'session-delete.dialog'
+    // DSH 0.2.2 replaced the session row menu's built-in actions with
+    // `ctx.contextMenus`; a legacy slot row renders before the built-in Archive
+    // action no matter what `order` says. This provider is the same row in that
+    // newer menu, placed after Archive (order 600, `afterContent`) so Delete
+    // stays the last row. Older DSH keeps using the legacy slot below.
+    const CONTEXT_MENU_ID = 'session-delete.delete'
+    const CONTEXT_ICON_KEY = 'session-delete.delete'
+    const DELETE_MENU_ORDER = 100000
     const ENDPOINT = '/__chameleon/session/delete'
     const NS = 'session-delete'
 
@@ -371,6 +379,44 @@ window.__ModuleLoader__.load({
       return useSessions((state) => (state && state.byId ? state.byId[sessionId] : undefined))
     }
 
+    /** The row label for the context-menu provider, in the active locale. */
+    function menuLabel() {
+      let seat = null
+      try {
+        if (localeService !== null && typeof localeService.bind === 'function') seat = localeService.bind(NS)
+      } catch {
+        /* the built-in dictionary is the fallback */
+      }
+      return resolveText(seat, 'menu.delete')
+    }
+
+    /** Whether the client currently reports the Session as running. */
+    function sessionRunning(ctx, sessionId) {
+      try {
+        const sessions = ctx.get('sessions')
+        const list = sessions && sessions.list
+        const snapshot = list && typeof list.getSnapshot === 'function' ? list.getSnapshot() : undefined
+        const row = snapshot && snapshot.byId ? snapshot.byId[sessionId] : undefined
+        return row !== undefined && row.running === true
+      } catch {
+        return false
+      }
+    }
+
+    /** Open the shared confirmation dialog from a non-React context-menu row. */
+    function requestDelete(ctx, sessionId, displayTitle) {
+      setRequest({
+        requestId: `${Date.now()}:${sessionId}`,
+        sessionId,
+        displayTitle: displayTitle ?? null,
+        running: sessionRunning(ctx, sessionId),
+      })
+    }
+
+    function DeleteContextMenuIcon() {
+      return React.createElement(IconTrashOutlineRegular, { size: 14 })
+    }
+
     function DeleteSessionButton(props) {
       const sessionId = props.sessionId
       const seat = seatOf(props)
@@ -476,13 +522,46 @@ window.__ModuleLoader__.load({
         locale: NS,
       }, DeleteSessionButton))
 
-      ctx.slots.inject(MENU_SLOT, () => ctx.slots.register({
-        name: MENU_SLOT,
-        id: MENU_ID,
-        order: 500,
-        locale: NS,
-        inject: menuInjected,
-      }, DeleteSessionMenuItem))
+      // DSH 0.2.2+ session row menu: register the real context-menu provider so
+      // Delete lands after the built-in Archive row (`afterContent`, order 600).
+      // A legacy slot row is always rendered before Archive there, regardless of
+      // its numeric order, so the old registration is used only as the fallback
+      // for earlier DSH versions.
+      let contextMenus
+      try {
+        contextMenus = ctx.get('contextMenus')
+      } catch {
+        contextMenus = undefined
+      }
+      if (contextMenus !== undefined && contextMenus !== null && typeof contextMenus.register === 'function') {
+        ctx.slots.inject('contextMenu.icon', () => ctx.slots.register({
+          name: 'contextMenu.icon',
+          key: CONTEXT_ICON_KEY,
+        }, DeleteContextMenuIcon))
+
+        ctx.effect(() => contextMenus.register({
+          id: CONTEXT_MENU_ID,
+          target: 'session',
+          order: DELETE_MENU_ORDER,
+          resolve: (target) => [{
+            id: 'delete',
+            label: menuLabel(),
+            icon: { key: CONTEXT_ICON_KEY },
+            danger: true,
+            separatorBefore: true,
+            afterContent: true,
+            run: () => requestDelete(ctx, target.sessionId, target.displayTitle),
+          }],
+        }), 'session-delete: context menu row')
+      } else {
+        ctx.slots.inject(MENU_SLOT, () => ctx.slots.register({
+          name: MENU_SLOT,
+          id: MENU_ID,
+          order: 500,
+          locale: NS,
+          inject: menuInjected,
+        }, DeleteSessionMenuItem))
+      }
 
       ctx.slots.inject(OVERLAY_SLOT, () => ctx.slots.register({
         name: OVERLAY_SLOT,
