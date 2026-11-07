@@ -6,6 +6,8 @@
 [![DSH](https://img.shields.io/badge/DSH-0.2.2--rc.1-blue)](https://github.com/deepseek-ai/deepseek-harness)
 
 > **实测从 `V0.2.0-rc.*` 到 `0.2.2-rc.1` 可用；不出意外将支持 `0.2.2-rc.*` 所有版本。** 槽位名、服务签名会随版本变化，其他版本请自行核对。
+>
+> `package.json` 的 `engines.dsh` 声明 `>=0.2.0-rc.0 <0.3.0-0`，DSH 会拦截范围外的版本。
 
 简单实用的会话删除工具，在 DeepSeek Harness 中彻底删除会话及其相关数据。
 
@@ -50,7 +52,7 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete
 | 菜单项     | 侧栏会话行 "..." → 「删除会话」 |
 | agent 工具 | `session_delete`（参数见下）    |
 
-侧栏会话行「...」菜单中的「删除会话」位于「归档会话」之前，遵循 DSH 的菜单分组设计。
+侧栏会话行「...」菜单中的「删除会话」在 DSH 0.2.2+ 位于「归档会话」之后；旧版按 legacy 菜单顺序。
 
 侧栏菜单项与确认弹窗（截图为深色主题）：
 
@@ -113,6 +115,7 @@ dsh plugin --profile desktop add @liuyu-f/dsh-plugin-session-cascade-delete
 
 | 版本  | 变更                                                                                                                                                                      |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0.9 | 新版菜单桥接：DSH 0.2.2+ 通过官方 `ctx.contextMenus` 注册，删除项位于 Archive 之后；旧版继续使用 legacy slot。新增 `engines.dsh` 兼容范围，并复用同一个删除请求与图标逻辑                |
 | 1.0.8 | 回退 1.0.7 的 `ctx.contextMenus` 适配，恢复 legacy slot；删除项稳定位于「归档会话」之前。遵循 DSH 将 Archive 放在菜单 footer 的官方设计，不为顺序增加生命周期代码                        |
 | 1.0.7 | 适配 DSH 0.2.2 的会话菜单：删除项改由 `ctx.contextMenus` 注册，固定在 Archive 之后；旧版 DSH 仍走 legacy slot。兼容范围更新到 `0.2.2-rc.1`，并补充 agent 删除示例截图                |
 | 1.0.6 | 文档：更新 DSH 兼容范围——实测 `V0.2.0-rc.*` 到 `0.2.1-rc.5` 可用，`0.2.1-rc.*` 预期全部可用                                                                               |

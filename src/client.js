@@ -46,6 +46,9 @@ window.__ModuleLoader__.load({
     const HEADER_ID = 'session-delete.header'
     const MENU_ID = 'session-delete.menu'
     const DIALOG_ID = 'session-delete.dialog'
+    const CONTEXT_MENU_ID = 'session-delete.delete'
+    const CONTEXT_ICON_KEY = 'session-delete.delete'
+    const DELETE_MENU_ORDER = 100000
     const ENDPOINT = '/__chameleon/session/delete'
     const NS = 'session-delete'
 
@@ -381,7 +384,7 @@ window.__ModuleLoader__.load({
       const label = running ? t('button.titleRunning') : t('button.title')
 
       const open = React.useCallback(() => {
-        setRequest({ requestId: `${Date.now()}:${sessionId}`, sessionId, displayTitle, running })
+        openDeleteRequest(sessionId, displayTitle, running)
       }, [sessionId, displayTitle, running])
 
       return React.createElement(Tooltip, {
@@ -414,7 +417,7 @@ window.__ModuleLoader__.load({
 
       const select = React.useCallback(() => {
         if (closeMenu !== null) closeMenu(false)
-        setRequest({ requestId: `${Date.now()}:${sessionId}`, sessionId, displayTitle, running })
+        openDeleteRequest(sessionId, displayTitle, running)
       }, [closeMenu, sessionId, displayTitle, running])
 
       return React.createElement(MenuItemButton, {
@@ -423,6 +426,93 @@ window.__ModuleLoader__.load({
         icon: React.createElement(IconTrashOutlineRegular, { size: 14 }),
         onSelect: select,
       }, t('menu.delete'))
+    }
+
+    // --- session-row menu installation -------------------------------------------
+
+    /** Open the shared confirmation dialog from any entry point. */
+    function openDeleteRequest(sessionId, displayTitle, running) {
+      setRequest({
+        requestId: `${Date.now()}:${sessionId}`,
+        sessionId,
+        displayTitle,
+        running,
+      })
+    }
+
+    /** The client's live running flag for a Session, read outside React. */
+    function sessionRunning(ctx, sessionId) {
+      try {
+        const sessions = ctx.get('sessions')
+        const snapshot = sessions?.list?.getSnapshot?.()
+        return snapshot?.byId?.[sessionId]?.running === true
+      } catch {
+        return false
+      }
+    }
+
+    /** The localized row label for the native context-menu provider. */
+    function menuLabel() {
+      let seat = null
+      try {
+        if (localeService !== null && typeof localeService.bind === 'function') seat = localeService.bind(NS)
+      } catch {
+        /* the built-in dictionary is the fallback */
+      }
+      return resolveText(seat, 'menu.delete')
+    }
+
+    function DeleteContextMenuIcon() {
+      return React.createElement(IconTrashOutlineRegular, { size: 14 })
+    }
+
+    /**
+     * Register the row twice by design: the legacy slot first (the only path on
+     * DSH < 0.2.2), then swap it for the native context-menu provider once that
+     * service appears. `ctx.inject` is the optional-service form; on older DSH
+     * the callback never runs, so the legacy row remains. On 0.2.2+ exactly one
+     * row survives, placed after the built-in Archive footer.
+     */
+    function installSessionMenu(ctx) {
+      let disposeLegacy = ctx.slots.inject(MENU_SLOT, () => ctx.slots.register({
+        name: MENU_SLOT,
+        id: MENU_ID,
+        order: 500,
+        locale: NS,
+        inject: (standard, hookContext) => ({
+          hooks: {
+            menuOpenState: () => (typeof hookContext === 'function' ? hookContext : () => [false, () => {}]),
+          },
+        }),
+      }, DeleteSessionMenuItem))
+
+      let disposeIcon
+      ctx.inject(['contextMenus'], (sub) => {
+        if (disposeLegacy !== undefined) {
+          disposeLegacy()
+          disposeLegacy = undefined
+        }
+        if (disposeIcon === undefined) {
+          disposeIcon = ctx.slots.inject('contextMenu.icon', () => ctx.slots.register({
+            name: 'contextMenu.icon',
+            key: CONTEXT_ICON_KEY,
+          }, DeleteContextMenuIcon))
+        }
+        sub.effect(() => sub.contextMenus.register({
+          id: CONTEXT_MENU_ID,
+          target: 'session',
+          order: DELETE_MENU_ORDER,
+          resolve: ({ sessionId, displayTitle }) => [{
+            id: 'delete',
+            label: menuLabel(),
+            icon: { key: CONTEXT_ICON_KEY },
+            danger: true,
+            separatorBefore: true,
+            afterContent: true,
+            run: () => openDeleteRequest(sessionId, displayTitle, sessionRunning(ctx, sessionId)),
+          }],
+        }), 'session-delete: context menu row')
+      })
     }
 
     // --- apply ------------------------------------------------------------------
@@ -460,15 +550,6 @@ window.__ModuleLoader__.load({
         })
       }
 
-      // `useSessions` (running state, display title) and a session-scoped
-      // `sessionId` are STANDARD props the renderer injects for every entry, so
-      // only the row owner's `useMenuOpenState` has to be contributed here.
-      const menuInjected = (standard, hookContext) => ({
-        hooks: {
-          menuOpenState: () => (typeof hookContext === 'function' ? hookContext : () => [false, () => {}]),
-        },
-      })
-
       ctx.slots.inject(HEADER_SLOT, () => ctx.slots.register({
         name: HEADER_SLOT,
         id: HEADER_ID,
@@ -476,13 +557,7 @@ window.__ModuleLoader__.load({
         locale: NS,
       }, DeleteSessionButton))
 
-      ctx.slots.inject(MENU_SLOT, () => ctx.slots.register({
-        name: MENU_SLOT,
-        id: MENU_ID,
-        order: 500,
-        locale: NS,
-        inject: menuInjected,
-      }, DeleteSessionMenuItem))
+      installSessionMenu(ctx)
 
       ctx.slots.inject(OVERLAY_SLOT, () => ctx.slots.register({
         name: OVERLAY_SLOT,
